@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Face Verify - One Face One Vote</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body{font-family:Arial;background:#0f172a;color:#fff;text-align:center;padding:20px;margin:0}
+#video{width:380px;height:280px;border-radius:20px;border:4px solid #22c55e;background:#000;transform:scaleX(-1);object-fit:cover}
+.wrap{position:relative;width:380px;margin:20px auto}
+.btn{padding:12px 25px;border:none;border-radius:12px;font-size:16px;cursor:pointer;margin:8px;font-weight:bold}
+.start{background:#22c55e;color:#fff}
+.verify{background:#334155;color:#94a3b8}
+.verify.active{background:#22c55e;color:#fff}
+.box{background:#1e293b;padding:15px;border-radius:12px;margin:15px auto;max-width:420px;border:1px solid #334155}
+#count{color:#22c55e;font-size:28px}
+</style>
+</head>
+<body>
+<h2>🔐 Face Verify - One Face = One Vote</h2>
+<p>Start Camera → Blink 3 Times → Face Duplicate Check</p>
+
+<div class="wrap">
+<video id="video" autoplay muted playsinline></video>
+</div>
+
+<div class="box">
+<h3>Blinks: <span id="count">0</span> / 3</h3>
+<p id="status">👉 Click Start Camera</p>
+<p id="ear" style="font-size:12px;color:#94a3b8">Face Status: --</p>
+</div>
+
+<button class="btn start" onclick="startCamera()">📷 Start Camera</button>
+<button class="btn verify" id="verifyBtn" onclick="goVote()" disabled>Verify & Go to Vote</button>
+<p style="margin-top:15px;color:#64748b;font-size:12px">Click video 3 times if auto blink fails (demo mode)</p>
+
+<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+<script>
+let blinkCount=0, eyeClosed=false, currentDescriptor=null;
+let video=document.getElementById('video');
+let countSpan=document.getElementById('count');
+let statusP=document.getElementById('status');
+let earP=document.getElementById('ear');
+let verifyBtn=document.getElementById('verifyBtn');
+
+async function startCamera(){
+ try{
+  statusP.innerText="Starting camera...";
+  let stream=await navigator.mediaDevices.getUserMedia({video:true});
+  video.srcObject=stream;
+  video.onloadedmetadata=async()=>{
+   statusP.innerText="Loading AI models...";
+   try{
+    await faceapi.nets.tinyFaceDetector.loadFromUri('https://justadudewhohacks.github.io/face-api.js/models');
+    await faceapi.nets.faceLandmark68Net.loadFromUri('https://justadudewhohacks.github.io/face-api.js/models');
+    await faceapi.nets.faceRecognitionNet.loadFromUri('https://justadudewhohacks.github.io/face-api.js/models');
+    statusP.innerText="✅ AI Ready - Blink 3 Times Slowly";
+    detectLoop();
+   }catch(e){
+    statusP.innerText="✅ Camera Ready - Blink 3 Times (Click fallback)";
+   }
+  };
+ }catch(e){
+  statusP.innerText="Camera blocked - Use click fallback";
+ }
+}
+
+function getEAR(eye){
+ let a=Math.hypot(eye[1].x-eye[5].x, eye[1].y-eye[5].y);
+ let b=Math.hypot(eye[2].x-eye[4].x, eye[2].y-eye[4].y);
+ let c=Math.hypot(eye[0].x-eye[3].x, eye[0].y-eye[3].y);
+ return (a+b)/(2*c);
+}
+
+async function detectLoop(){
+ setInterval(async()=>{
+  try{
+   let det=await faceapi.detectSingleFace(video,new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+   if(!det){earP.innerText="No face - Come closer"; return;}
+   // SAVE DESCRIPTOR HERE - THIS IS STEP 4
+   currentDescriptor = Array.from(det.descriptor);
+
+   let le=det.landmarks.getLeftEye();
+   let re=det.landmarks.getRightEye();
+   let ear=(getEAR(le)+getEAR(re))/2;
+   earP.innerText=`EAR: ${ear.toFixed(2)} ${ear<0.26?'(Closed)':'(Open)'} | Face Saved`;
+
+   if(ear<0.26 &&!eyeClosed){eyeClosed=true;}
+   if(ear>0.30 && eyeClosed){eyeClosed=false; addBlink();}
+  }catch(e){}
+ },400);
+}
+
+function addBlink(){
+ blinkCount++;
+ countSpan.innerText=blinkCount;
+ statusP.innerText=`✅ Blink ${blinkCount} Detected!`;
+ document.body.style.background="#14532d";
+ setTimeout(()=>document.body.style.background="#0f172a",200);
+ if(blinkCount>=3){
+  statusP.innerText="✅ Liveness Passed (3/3) - Click Verify";
+  verifyBtn.disabled=false;
+  verifyBtn.classList.add('active');
+ }
+}
+
+video.addEventListener('click',()=>{ if(blinkCount<3) addBlink(); });
+
+// STEP 4 - THIS IS WHERE WE ADD DUPLICATE FACE CHECK
+async function goVote(){
+ statusP.innerText="🔍 Checking if this face already voted...";
+ let voterId = localStorage.getItem('voterId') || document.getElementById('voterId')?.value || 'VOT0001';
+
+ // If no descriptor (demo mode), allow
+ if(!currentDescriptor){
+  statusP.innerText="No AI face data - Allowing in demo mode";
+  setTimeout(()=> window.location.href="vote.html", 800);
+  return;
+ }
+
+ try{
+  let res = await fetch('/api/face/check',{
+   method:'POST',
+   headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({voterId, descriptor: currentDescriptor})
+  });
+  let data = await res.json();
+
+  if(!data.allow){
+   statusP.innerText = data.msg;
+   earP.innerText = "❌ BLOCKED - Duplicate Face";
+   alert(data.msg);
+   return; // BLOCK HERE
+  } else {
+   statusP.innerText = "✅ New Face Verified - One Face One Vote Passed!";
+   setTimeout(()=> window.location.href="vote.html", 1000);
+  }
+ }catch(e){
+  // If API fails, still allow
+  window.location.href="vote.html";
+ }
+}
+</script>
+</body>
+</html>

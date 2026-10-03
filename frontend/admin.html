@@ -1,0 +1,18 @@
+<!DOCTYPE html><html><head><title>Admin Panel</title>
+<style>body{font-family:Arial;padding:20px;background:#f0fdfa} .card{background:white;padding:15px;margin:10px 0;border-radius:10px;box-shadow:0 2px 6px rgba(0,0,0,.1)} button{background:#008D87;color:white;border:none;padding:8px 15px;border-radius:6px;cursor:pointer;margin-right:5px}</style>
+</head><body>
+<h2>Admin Panel - Approval Flow</h2>
+<button onclick="load()">Refresh Pending</button> <button onclick="clearAll()" style="background:#c00">Clear All Users</button>
+<div id="list">Loading...</div>
+<script>
+async function load(){
+  const res=await fetch('/api/admin/pending'); const users=await res.json();
+  if(users.length===0){ list.innerHTML="<p>No pending - All Approved ✅</p>"; return; }
+  list.innerHTML=users.map(u=>`<div class="card"><b>${u.name}</b> (${u.voterId})<br>Aadhaar: ${u.aadhaar}<br>Status: ${u.status}<br><button onclick="approve('${u._id}')">Approve</button></div>`).join('');
+}
+async function approve(id){ await fetch('/api/admin/approve/'+id,{method:'PUT'}); alert('Approved'); load(); }
+async function clearAll(){ if(confirm('Delete ALL users?')){ await fetch('/api/admin/clear',{method:'DELETE'}); load(); } }
+load();
+</script>
+<p><a href="register.html">Register</a> | <a href="results.html">Results</a></p>
+</body></html>

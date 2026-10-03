@@ -1,0 +1,15 @@
+<!DOCTYPE html><html><head><title>Login</title>
+<style>body{font-family:Arial;display:flex;justify-content:center;padding:30px;background:#f0fdfa} .box{background:white;padding:25px;border-radius:12px;width:350px;box-shadow:0 4px 10px rgba(0,0,0,.1)} input{width:100%;padding:10px;margin:8px 0;border-radius:8px;border:1px solid #ccc} button{width:100%;padding:12px;background:#008D87;color:white;border:none;border-radius:8px}</style>
+</head><body><div class="box"><h2>Login - Voter</h2>
+<input id="voterId" placeholder="VoterID"><input id="aadhaar" placeholder="Aadhaar">
+<button onclick="login()">Login</button><p id="msg"></p><a href="face-verify.html">Next: Face Verify (Demo)</a>
+</div>
+<script>
+async function login(){
+  const res=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({voterId:voterId.value,aadhaar:aadhaar.value})});
+  const j=await res.json();
+  msg.innerText=j.message||j.error;
+  if(j.message){ localStorage.setItem('voterId',voterId.value); msg.style.color='green'; setTimeout(()=>location.href='face-verify.html',800); }
+  else msg.style.color='red';
+}
+</script></body></html>

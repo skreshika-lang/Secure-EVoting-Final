@@ -1,0 +1,22 @@
+<!DOCTYPE html><html><head><title>Register</title>
+<style>body{font-family:Arial;display:flex;justify-content:center;padding:30px;background:#f0fdfa} .box{background:white;padding:25px;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,.1);width:350px} input{width:100%;padding:10px;margin:8px 0;border-radius:8px;border:1px solid #ccc} button{width:100%;padding:12px;background:#008D87;color:white;border:none;border-radius:8px;cursor:pointer} a{color:#008D87}</style>
+</head><body>
+<div class="box"><h2>Secure E-Voting - Register</h2>
+<input id="name" placeholder="Name - ex: Kavya">
+<input id="voterId" placeholder="VoterID - ex: VOT0001">
+<input id="aadhaar" placeholder="Aadhaar 12 digit">
+<input id="phone" placeholder="Phone 10 digit">
+<input id="email" placeholder="Email">
+<button onclick="register()">Register</button>
+<p id="msg"></p>
+<p><a href="login.html">Already registered? Login</a> | <a href="admin.html">Admin</a></p>
+</div>
+<script>
+async function register(){
+  const data={name:name.value,voterId:voterId.value,aadhaar:aadhaar.value,phone:phone.value,email:email.value};
+  const res=await fetch('/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+  const j=await res.json();
+  msg.innerText=j.message||j.error;
+  if(j.message) msg.style.color='green'; else msg.style.color='red';
+}
+</script></body></html>

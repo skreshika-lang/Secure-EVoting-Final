@@ -1,0 +1,26 @@
+<!DOCTYPE html><html><head><title>Vote</title>
+<style>body{font-family:Arial;padding:30px;background:#f0fdfa;text-align:center} .card{display:inline-block;background:white;padding:20px;margin:10px;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,.1);cursor:pointer;width:150px} .card:hover{border:2px solid #008D87} button{padding:12px 25px;background:#008D87;color:white;border:none;border-radius:8px;margin-top:20px}</style>
+</head><body>
+<h2>Cast Your Vote - Secure Blockchain</h2><p>Logged in as: <b id="vid"></b></p>
+<div>
+<div class="card" onclick="select('BJP')"><h3>🪷 BJP</h3></div>
+<div class="card" onclick="select('Congress')"><h3>✋ Congress</h3></div>
+<div class="card" onclick="select('AAP')"><h3>🧹 AAP</h3></div>
+<div class="card" onclick="select('NOTA')"><h3>NOTA</h3></div>
+</div>
+<p id="sel">Selected: None</p><button onclick="cast()">Submit Vote</button><p id="msg"></p><a href="results.html">View Results</a>
+<script>
+let chosen="";
+vid.innerText=localStorage.getItem('voterId')||"Guest";
+function select(c){ chosen=c; sel.innerText="Selected: "+c; }
+async function cast(){
+  if(!chosen){ alert("Select candidate"); return; }
+  const voterId=localStorage.getItem('voterId');
+  if(!voterId){ alert("Login first"); location.href='login.html'; return; }
+  const res=await fetch('/api/vote/cast',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({voterId,candidate:chosen})});
+  const j=await res.json();
+  msg.innerText=j.message||j.error;
+  if(j.message){ msg.style.color='green'; msg.innerText+=` | Block Hash: ${j.vote.hash} | Block #${j.blockNo}`; }
+  else msg.style.color='red';
+}
+</script></body></html>

@@ -1,0 +1,21 @@
+<!DOCTYPE html><html><head><title>Results</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>body{font-family:Arial;padding:20px;background:#f0fdfa} .stats{display:flex;gap:15px} .box{background:white;padding:15px;border-radius:10px;flex:1;box-shadow:0 2px 6px rgba(0,0,0,.1)} table{width:100%;background:white;border-collapse:collapse;margin-top:15px} th,td{border:1px solid #ddd;padding:8px} th{background:#008D87;color:white}</style>
+</head><body>
+<h2>Live Results - Blockchain Ledger</h2>
+<div class="stats"><div class="box">Total Users: <b id="tu">0</b></div><div class="box">Total Votes: <b id="tv">0</b></div><div class="box">Chain Status: <b id="cs">Checking...</b></div></div>
+<canvas id="chart" style="max-width:600px;margin:20px auto;background:white;padding:15px;border-radius:12px"></canvas>
+<h3>Ledger (Hash Chain)</h3><table><thead><tr><th>Block</th><th>Voter</th><th>Candidate</th><th>Hash</th><th>Prev Hash</th></tr></thead><tbody id="ledger"></tbody></table>
+<p><a href="/api/vote/verify-chain" target="_blank">API: /api/vote/verify-chain (Tamper Check)</a></p>
+<script>
+async function load(){
+  const res=await fetch('/api/vote/results'); const j=await res.json();
+  tu.innerText=j.totalUsers; tv.innerText=j.totalVotes;
+  const labels=Object.keys(j.counts); const data=Object.values(j.counts);
+  new Chart(document.getElementById('chart'),{type:'pie',data:{labels,datasets:[{data,backgroundColor:['#008D87','#22C0C7','#FFB703','#FB8500']}]}});
+  ledger.innerHTML=j.ledger.map((v,i)=>`<tr><td>#${i}</td><td>${v.voterId}</td><td>${v.candidate}</td><td>${v.hash}</td><td>${v.previousHash}</td></tr>`).join('');
+  const ver=await fetch('/api/vote/verify-chain'); const vj=await ver.json();
+  cs.innerText=vj.message; cs.style.color=vj.valid?'green':'red';
+}
+load();
+</script></body></html>
